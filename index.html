@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>数え方 練習</title>
+
+<style>
+  body {
+    font-family: "Yu Gothic", "Meiryo", sans-serif;
+    text-align: center;
+    margin-top: 80px;
+  }
+
+  .question {
+    font-size: 150px;
+    margin: 60px 0;
+  }
+
+  button {
+    font-size: 50px;
+    padding: 8px 24px;
+  }
+
+  .counter {
+    position: fixed;
+    right: 10px;
+    bottom: 10px;
+    font-size: 18px;
+    color: #666;
+  }
+</style>
+</head>
+
+<body>
+
+<div class="question" id="question">1つ</div>
+
+<button onclick="generate()">▶</button>
+
+<!-- 最初から1を表示 -->
+<div class="counter" id="counter">1</div>
+
+<script>
+let count = 1; // 初期値を1にする
+
+function randomFromArray(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function generate() {
+  const types = [
+    { suffix: "つ", nums: [1,2,3,4,5,6,7,8,9] },
+    { suffix: "か月", nums: [1,2,3,4,5,6,7,8,9,10] },
+    { suffix: "分", nums: [1,2,3,4,5,6,7,8,9,10] },
+    { suffix: "日", nums: [1,2,3,4,5,6,7,8,9,10,14,20,24] },
+    { suffix: "じ", nums: [1,2,3,4,5,6,7,8,9,10,11,12] },
+    { suffix: "月", nums: [1,2,3,4,5,6,7,8,9,10,11,12] },
+    { suffix: "さい", nums: [1,2,3,4,5,6,7,8,9,10] }
+  ];
+
+  const selected = randomFromArray(types);
+  const number = randomFromArray(selected.nums);
+
+  document.getElementById("question").textContent =
+    number + selected.suffix;
+
+  count++;
+  document.getElementById("counter").textContent = count;
+}
+</script>
+
+</body>
+</html>
