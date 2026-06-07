@@ -5,68 +5,197 @@
 <title>数え方 練習</title>
 
 <style>
-  body {
-    font-family: "Yu Gothic", "Meiryo", sans-serif;
-    text-align: center;
-    margin-top: 80px;
-  }
+body {
+  font-family: "Yu Gothic", "Meiryo", sans-serif;
+  text-align: center;
+  margin: 0;
+  padding: 20px;
+}
 
-  .question {
-    font-size: 150px;
-    margin: 60px 0;
-  }
+.question {
+  font-size: clamp(100px, 30vw, 200px);
+  margin: 40px 0 10px;
+  line-height: 1.1;
+}
 
-  button {
-    font-size: 50px;
-    padding: 8px 24px;
-  }
+.reading {
+  font-size: clamp(40px, 10vw, 70px);
+  color: #333;
+  height: 90px;
+  margin-bottom: 30px;
+}
 
-  .counter {
-    position: fixed;
-    right: 10px;
-    bottom: 10px;
-    font-size: 18px;
-    color: #666;
-  }
+button {
+  font-size: clamp(50px, 12vw, 80px);
+  padding: 18px 40px;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+}
+
+.counter {
+  position: fixed;
+  right: 10px;
+  bottom: 10px;
+  font-size: 16px;
+  color: #666;
+}
 </style>
 </head>
 
 <body>
 
-<div class="question" id="question">1つ</div>
+<div class="question" id="question"></div>
+<div class="reading" id="reading"></div>
 
-<button onclick="generate()">▶</button>
-
-<!-- 最初から1を表示 -->
+<button onclick="handle()">▶</button>
 <div class="counter" id="counter">1</div>
 
 <script>
-let count = 1; // 初期値を1にする
 
-function randomFromArray(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
+const types = [
+  { suffix: "つ", nums: [1,2,3,4,5,6,7,8,9] },
+  { suffix: "か月", nums: [1,2,3,4,5,6,7,8,9,10] },
+  { suffix: "分", nums: [1,2,3,4,5,6,7,8,9,10] },
+  { suffix: "日", nums: [1,2,3,4,5,6,7,8,9,10] },
+  { suffix: "じ", nums: [1,2,3,4,5,6,7,8,9,10,11,12] },
+  { suffix: "月", nums: [1,2,3,4,5,6,7,8,9,10,11,12] },
+  { suffix: "さい", nums: [1,2,3,4,5,6,7,8,9,10] },
+  { suffix: "人", nums: [1,2,3,4] }
+];
+
+let words = [];
+let currentIndex = 0;
+let revealed = false;
+
+let count = 1;
+
+words = smartShuffle(generateAll());
+render();
+
+function generateAll() {
+  let arr = [];
+
+  for (let t of types) {
+    for (let n of t.nums) {
+      arr.push({
+        w: n + t.suffix,
+        r: getReading(n, t.suffix)
+      });
+    }
+  }
+
+  return arr;
 }
 
-function generate() {
-  const types = [
-    { suffix: "つ", nums: [1,2,3,4,5,6,7,8,9] },
-    { suffix: "か月", nums: [1,2,3,4,5,6,7,8,9,10] },
-    { suffix: "分", nums: [1,2,3,4,5,6,7,8,9,10] },
-    { suffix: "日", nums: [1,2,3,4,5,6,7,8,9,10,14,20,24] },
-    { suffix: "じ", nums: [1,2,3,4,5,6,7,8,9,10,11,12] },
-    { suffix: "月", nums: [1,2,3,4,5,6,7,8,9,10,11,12] },
-    { suffix: "さい", nums: [1,2,3,4,5,6,7,8,9,10] }
-  ];
+function smartShuffle(arr) {
+  let result = [];
+  let pool = [...arr];
+  let last = null;
 
-  const selected = randomFromArray(types);
-  const number = randomFromArray(selected.nums);
+  while (pool.length > 0) {
+    let candidates = pool.filter(x => x.w !== last);
+    if (candidates.length === 0) candidates = pool;
 
-  document.getElementById("question").textContent =
-    number + selected.suffix;
+    const pick = candidates[Math.floor(Math.random() * candidates.length)];
 
-  count++;
-  document.getElementById("counter").textContent = count;
+    result.push(pick);
+    pool = pool.filter(x => x !== pick);
+    last = pick.w;
+  }
+
+  return result;
 }
+
+/* ★指定の読みを完全固定 */
+function getReading(num, suffix) {
+
+  const tsu = {
+    1:"ひとつ",2:"ふたつ",3:"みっつ",4:"よっつ",5:"いつつ",
+    6:"むっつ",7:"ななつ",8:"やっつ",9:"ここのつ"
+  };
+
+  const month = {
+    1:"いっかげつ",2:"にかげつ",3:"さんかげつ",4:"よんかげつ",5:"ごかげつ",
+    6:"ろっかげつ",7:"ななかげつ",8:"はっかげつ",9:"きゅうかげつ",10:"じゅっかげつ"
+  };
+
+  const minute = {
+    1:"いっぷん",2:"にふん",3:"さんぷん",4:"よんぷん",5:"ごふん",
+    6:"ろっぷん",7:"ななふん",8:"はっぷん",9:"きゅうふん",10:"じゅっぷん"
+  };
+
+  const day = {
+    1:"ついたち",2:"ふつか",3:"みっか",4:"よっか",5:"いつか",
+    6:"むいか",7:"なのか",8:"ようか",9:"ここのか",10:"とおか"
+  };
+
+  const hour = {
+    1:"いちじ",2:"にじ",3:"さんじ",4:"よじ",5:"ごじ",
+    6:"ろくじ",7:"しちじ",8:"はちじ",9:"くじ",10:"じゅうじ",
+    11:"じゅういちじ",12:"じゅうにじ"
+  };
+
+  const monthName = {
+    1:"いちがつ",2:"にがつ",3:"さんがつ",4:"しがつ",5:"ごがつ",
+    6:"ろくがつ",7:"しちがつ",8:"はちがつ",9:"くがつ",
+    10:"じゅうがつ",11:"じゅういちがつ",12:"じゅうにがつ"
+  };
+
+  const age = {
+    1:"いっさい",2:"にさい",3:"さんさい",4:"よんさい",
+    5:"ごさい",6:"ろくさい",7:"ななさい",8:"はっさい",
+    9:"きゅうさい",10:"じゅっさい"
+  };
+
+  const people = {
+    1:"ひとり",
+    2:"ふたり",
+    3:"さんにん",
+    4:"よにん"
+  };
+
+  if (suffix === "つ") return tsu[num];
+  if (suffix === "か月") return month[num];
+  if (suffix === "分") return minute[num];
+  if (suffix === "日") return day[num];
+  if (suffix === "じ") return hour[num];
+  if (suffix === "月") return monthName[num];
+  if (suffix === "さい") return age[num];
+  if (suffix === "人") return people[num];
+
+  return "";
+}
+
+function render() {
+  const word = words[currentIndex];
+
+  document.getElementById("question").textContent = word.w;
+  document.getElementById("counter").textContent = currentIndex + 1;
+
+  document.getElementById("reading").textContent =
+    revealed ? word.r : "";
+}
+
+function handle() {
+
+  if (!revealed) {
+    revealed = true;
+    render();
+    return;
+  }
+
+  currentIndex++;
+
+  if (currentIndex >= words.length) {
+    words = smartShuffle(generateAll());
+    currentIndex = 0;
+  }
+
+  revealed = false;
+  render();
+}
+
 </script>
 
 </body>
