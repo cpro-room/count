@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>いくつですか？</title>
+
+<style>
+  body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 70px 12px 20px; /* ←インジケータ分の余白追加 */
+    background: #fafafa;
+  }
+
+  h1 {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 1.6rem;
+  }
+
+#indicator {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90vw;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  z-index: 10000;
+}
+
+#indicator span {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #ccc;
+  display: inline-block;
+}
+
+@media (max-width: 600px) {
+  #indicator span {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+  #indicator span.correct {
+    background: red;
+  }
+
+  #questionNumber {
+    font-size: 1.1rem;
+    text-align: center;
+    margin-top: 10px;
+  }
+
+  #questionBox {
+    font-size: 2.2rem;
+    text-align: center;
+    margin-top: 10px;
+  }
+
+  #optionsBox {
+    position: relative;
+    width: 100%;
+    max-width: 900px;
+    height: 55vh; /* ←スマホでも収まりやすく */
+    max-height: 360px;
+    margin: 15px auto;
+    border: 1px solid #ccc;
+    background: white;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  .option {
+    position: absolute;
+    padding: 6px 10px;
+    font-size: 1.1rem;
+    background: #eee;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.3s;
+    will-change: transform;
+    white-space: nowrap;
+  }
+
+  .option:hover {
+    background: #d0eaff;
+  }
+
+  #judge {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    font-size: 6rem;
+    color: red;
+    font-weight: bold;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    user-select: none;
+    z-index: 10;
+    opacity: 0.85;
+  }
+
+  #result {
+    text-align: center;
+    font-size: 1.2rem;
+    margin-top: 15px;
+  }
+
+  /* ===== スマホ最適化 ===== */
+  @media (max-width: 600px) {
+
+    body {
+      padding: 80px 8px 20px;
+    }
+
+    h1 {
+      font-size: 1.3rem;
+    }
+
+    #indicator span {
+      width: 20px;
+      height: 20px;
+    }
+
+    #questionBox {
+      font-size: 1.8rem;
+    }
+
+    #optionsBox {
+      height: 50vh;
+    }
+
+    .option {
+      font-size: 1rem;
+      padding: 5px 8px;
+    }
+
+    #judge {
+      font-size: 4rem;
+    }
+  }
+</style>
+</head>
+
+<body>
+
+<h1>いくつですか？</h1>
+<div id="indicator"></div>
+<div id="questionNumber"></div>
+<div id="questionBox"></div>
+<div id="optionsBox">
+  <div id="judge"></div>
+</div>
+<div id="result"></div>
+
+<script>
+  const questionsData = [
+    { num: 1, word: "ひとつ" },
+    { num: 2, word: "ふたつ" },
+    { num: 3, word: "みっつ" },
+    { num: 4, word: "よっつ" },
+    { num: 5, word: "いつつ" },
+    { num: 6, word: "むっつ" },
+    { num: 7, word: "ななつ" },
+    { num: 8, word: "やっつ" },
+    { num: 9, word: "ここのつ" },
+    { num: 10, word: "とお" },
+  ];
+
+  let questions = [];
+  let current = 0;
+  let correctCount = 0;
+  let animationId = null;
+  let moveData = [];
+  let isAnswering = false;
+  let startTime = 0;
+
+  const indicator = document.getElementById("indicator");
+  const questionNumber = document.getElementById("questionNumber");
+  const questionBox = document.getElementById("questionBox");
+  const optionsBox = document.getElementById("optionsBox");
+  const judge = document.getElementById("judge");
+  const resultBox = document.getElementById("result");
+
+  function shuffle(arr) {
+    return arr
+      .map((v) => ({ v, sort: Math.random() }))
+      .sort((a, b) => a.sort - b.sort)
+      .map(({ v }) => v);
+  }
+
+  function createIndicator() {
+    indicator.innerHTML = "";
+    for (let i = 0; i < 10; i++) {
+      const span = document.createElement("span");
+      indicator.appendChild(span);
+    }
+  }
+
+  function updateIndicator() {
+    const spans = indicator.children;
+    for (let i = 0; i < spans.length; i++) {
+      spans[i].classList.toggle("correct", i < correctCount);
+    }
+  }
+
+  function showQuestion() {
+    isAnswering = false;
+    judge.textContent = "";
+    optionsBox.style.pointerEvents = "auto";
+
+    questionBox.textContent = questions[current].num;
+
+    optionsBox.querySelectorAll(".option").forEach((el) => el.remove());
+    moveData = [];
+
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+
+    const shuffledOptions = shuffle(questionsData.map((q) => q.word));
+
+    shuffledOptions.forEach((word) => {
+      const btn = document.createElement("div");
+      btn.className = "option";
+      btn.textContent = word;
+      optionsBox.appendChild(btn);
+      btn.style.position = "absolute";
+      const rect = btn.getBoundingClientRect();
+
+      let x, y, tries = 0;
+      do {
+const w = btn.offsetWidth;
+const h = btn.offsetHeight;
+
+x = Math.random() * (optionsBox.clientWidth - w);
+y = Math.random() * (optionsBox.clientHeight - h);
+        tries++;
+      } while (isOverlapping(x, y, btn.offsetWidth, btn.offsetHeight, moveData) && tries < 100);
+
+      btn.style.left = x + "px";
+      btn.style.top = y + "px";
+
+let dx = (Math.random() * 1.2 + 0.5) * (Math.random() < 0.5 ? -1 : 1);
+let dy = (Math.random() * 1.2 + 0.5) * (Math.random() < 0.5 ? -1 : 1);
+
+      moveData.push({ btn, x, y, dx, dy });
+
+      btn.onclick = () => {
+        if (isAnswering) return;
+        isAnswering = true;
+        stopAnimation();
+        checkAnswer(word);
+      };
+    });
+
+    animate();
+  }
+
+  function isOverlapping(x, y, w, h, others) {
+    for (const obj of others) {
+      const ox = obj.x,
+        oy = obj.y,
+        ow = obj.btn.offsetWidth,
+        oh = obj.btn.offsetHeight;
+      if (x < ox + ow && x + w > ox && y < oy + oh && y + h > oy) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function animate() {
+    const w = optionsBox.clientWidth;
+    const h = optionsBox.clientHeight;
+
+    for (let i = 0; i < moveData.length; i++) {
+      let d = moveData[i];
+      d.x += d.dx;
+      d.y += d.dy;
+
+      if (d.x < 0) {
+        d.x = 0;
+        d.dx *= -1;
+      } else if (d.x > w - d.btn.offsetWidth) {
+        d.x = w - d.btn.offsetWidth;
+        d.dx *= -1;
+      }
+
+      if (d.y < 0) {
+        d.y = 0;
+        d.dy *= -1;
+      } else if (d.y > h - d.btn.offsetHeight) {
+        d.y = h - d.btn.offsetHeight;
+        d.dy *= -1;
+      }
+
+      for (let j = i + 1; j < moveData.length; j++) {
+        let d2 = moveData[j];
+        if (isOverlapping(d.x, d.y, d.btn.offsetWidth, d.btn.offsetHeight, [d2])) {
+          d.dx *= -1;
+          d.dy *= -1;
+          d2.dx *= -1;
+          d2.dy *= -1;
+
+          d.x += d.dx;
+          d.y += d.dy;
+          d2.x += d2.dx;
+          d2.y += d2.dy;
+        }
+      }
+
+      d.btn.style.left = d.x + "px";
+      d.btn.style.top = d.y + "px";
+    }
+
+    animationId = requestAnimationFrame(animate);
+  }
+
+  function stopAnimation() {
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+  }
+
+  function checkAnswer(choice) {
+    const currentQ = questions[current];
+    optionsBox.style.pointerEvents = "none";
+    stopAnimation();
+
+    if (choice === currentQ.word) {
+      correctCount++;
+      updateIndicator();
+      judge.innerHTML = '<span style="color:red;">○</span>';
+
+      setTimeout(() => {
+        current++;
+        if (current < questions.length) {
+          showQuestion();
+        } else {
+          finishQuiz();
+        }
+      }, 700);
+} else {
+  judge.innerHTML = '<span style="color:red;">×</span>';
+
+  setTimeout(() => {
+    judge.textContent = "";
+    resetGame();
+  }, 1500);
+}
+    }
+
+function resetGame() {
+  current = 0;
+  correctCount = 0;
+  createIndicator();
+  updateIndicator();
+  optionsBox.style.pointerEvents = "auto";
+  resultBox.textContent = "";
+  questions = shuffle([...questionsData]);
+requestAnimationFrame(() => {
+  showQuestion();
+});
+  optionsBox.style.display = "block";
+}
+
+  function finishQuiz() {
+    const time = Math.floor((Date.now() - startTime) / 1000);
+    questionNumber.textContent = "";
+    questionBox.textContent = "";
+    optionsBox.style.display = "none";
+    judge.textContent = "";
+
+    resultBox.innerHTML = `
+      <div style="font-size:3rem; color:green; font-weight:bold;">
+        よくできました！
+      </div>
+      <div style="font-size:1.2rem; margin-top:10px;">
+        かかった じかん: ${time}びょう
+      </div>
+    `;
+  }
+  startTime = Date.now();
+
+  resetGame();
+</script>
+
+</body>
+</html>
